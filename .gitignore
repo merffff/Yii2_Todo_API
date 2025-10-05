@@ -1,0 +1,22 @@
+# Composer
+/vendor/
+composer.lock
+
+# Runtime data
+/runtime/
+/web/assets/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local

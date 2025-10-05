@@ -1,0 +1,35 @@
+{
+  "name": "yii2/todo-api",
+  "description": "Simple Todo API with Yii2",
+  "type": "project",
+  "require": {
+    "php": ">=8.0",
+    "yiisoft/yii2": "~2.0.49",
+    "yiisoft/yii2-composer": "~2.0.0"
+  },
+  "require-dev": {
+    "yiisoft/yii2-debug": "~2.1.0",
+    "yiisoft/yii2-gii": "~2.2.0"
+  },
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://asset-packagist.org"
+    }
+  ],
+  "config": {
+    "process-timeout": 1800,
+    "fxp-asset": {
+      "enabled": false
+    },
+    "allow-plugins": {
+      "yiisoft/yii2-composer": true
+    }
+  },
+  "autoload": {
+    "psr-4": {
+      "app\\": ""
+    }
+  },
+  "minimum-stability": "stable"
+}
