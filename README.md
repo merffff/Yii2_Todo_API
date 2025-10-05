@@ -174,17 +174,17 @@ API использует Memcached для кэширования списка з
 
 ### Получить все задачи
 ```bash
-curl -X GET http://localhost:8080/task
+curl -X GET http://localhost:8089/task
 ```
 
 ### Получить задачу по ID
 ```bash
-curl -X GET http://localhost:8080/task/1
+curl -X GET http://localhost:8089/task/1
 ```
 
 ### Создать новую задачу
 ```bash
-curl -X POST http://localhost:8080/task \
+curl -X POST http://localhost:8089/task \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Новая задача",
@@ -195,7 +195,7 @@ curl -X POST http://localhost:8080/task \
 
 ### Обновить задачу
 ```bash
-curl -X PUT http://localhost:8080/task/1 \
+curl -X PUT http://localhost:8089/task/1 \
   -H "Content-Type: application/json" \
   -d '{
     "status": "completed"
@@ -204,7 +204,7 @@ curl -X PUT http://localhost:8080/task/1 \
 
 ### Удалить задачу
 ```bash
-curl -X DELETE http://localhost:8080/task/1
+curl -X DELETE http://localhost:8089/task/1
 ```
 
 
