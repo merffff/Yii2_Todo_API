@@ -2,199 +2,111 @@
 
 namespace app\controllers;
 
+use app\components\ResponseHelper;
+use app\services\TaskService;
 use Yii;
-use yii\rest\Controller;
-use yii\web\Response;
-use yii\web\NotFoundHttpException;
+use Throwable;
 use yii\filters\VerbFilter;
-use app\models\Task;
+use yii\rest\Controller;
+use yii\web\NotFoundHttpException;
+use yii\web\Response;
 
 class TaskController extends Controller
 {
-    const CACHE_KEY = 'tasks_list';
-    const CACHE_DURATION = 300; // 5 минут
+    use ResponseHelper;
 
-    /**
-     * @inheritdoc
-     */
+    private TaskService $service;
+
+    public function __construct($id, $module, TaskService $service, $config = [])
+    {
+        $this->service = $service;
+        parent::__construct($id, $module, $config);
+    }
+
     public function behaviors()
     {
-        $behaviors = parent::behaviors();
-
-        $behaviors['contentNegotiator']['formats']['application/json'] = Response::FORMAT_JSON;
-
-        $behaviors['verbFilter'] = [
+        $b = parent::behaviors();
+        $b['contentNegotiator']['formats']['application/json'] = Response::FORMAT_JSON;
+        $b['verbFilter'] = [
             'class' => VerbFilter::class,
             'actions' => [
-                'index' => ['GET'],
-                'view' => ['GET'],
+                'index'  => ['GET'],
+                'view'   => ['GET'],
                 'create' => ['POST'],
                 'update' => ['PUT', 'PATCH'],
                 'delete' => ['DELETE'],
             ],
         ];
-
-        return $behaviors;
+        return $b;
     }
 
-    /**
-     * Получение списка всех задач
-     * GET /tasks
-     *
-     * @return array
-     */
     public function actionIndex()
     {
-        $cache = Yii::$app->cache;
-
-        $tasks = $cache->get(self::CACHE_KEY);
-
-        if ($tasks === false) {
-
-            $tasks = Task::find()->asArray()->all();
-
-            $cache->set(self::CACHE_KEY, $tasks, self::CACHE_DURATION);
+        try {
+            $tasks = $this->service->list();
+            return $this->jsonResponse(true, '', ['tasks' => $tasks]);
+        } catch (Throwable $e) {
+            Yii::error($e->getMessage(), __METHOD__);
+            return $this->jsonResponse(false, 'Failed to load tasks', [], 500);
         }
-
-        return [
-            'success' => true,
-            'data' => $tasks,
-        ];
     }
 
-    /**
-     * Получение конкретной задачи
-     * GET /tasks/{id}
-     *
-     * @param int $id
-     * @return array
-     * @throws NotFoundHttpException
-     */
     public function actionView($id)
     {
-        $task = $this->findModel($id);
-
-        return [
-            'success' => true,
-            'data' => $task->toArray(),
-        ];
+        try {
+            $task = $this->service->get($id);
+            return $this->jsonResponse(true, '', $task->toArray());
+        } catch (NotFoundHttpException $e) {
+            return $this->jsonResponse(false, 'Task not found', [], 404);
+        } catch (Throwable $e) {
+            Yii::error($e->getMessage(), __METHOD__);
+            return $this->jsonResponse(false, 'Error loading task', [], 500);
+        }
     }
 
-    /**
-     * Создание новой задачи
-     * POST /tasks
-     *
-     * @return array
-     */
     public function actionCreate()
     {
-        $task = new Task();
-        $task->load(Yii::$app->request->getBodyParams(), '');
-
-        if ($task->save()) {
-
-            $this->clearCache();
-
-            Yii::$app->response->setStatusCode(201);
-            return [
-                'success' => true,
-                'message' => 'Task created successfully',
-                'data' => $task->toArray(),
-            ];
+        try {
+            $task = $this->service->create(Yii::$app->request->getBodyParams());
+            return $this->jsonResponse(true, 'Task created successfully', $task->toArray(), 201);
+        } catch (Throwable $e) {
+            Yii::warning($e->getMessage(), __METHOD__);
+            return $this->jsonResponse(false, 'Validation failed', $this->decodeErrors($e), 422);
         }
-
-        Yii::$app->response->setStatusCode(422);
-        return [
-            'success' => false,
-            'message' => 'Validation failed',
-            'errors' => $task->errors,
-        ];
     }
 
-    /**
-     * Обновление задачи
-     * PUT /tasks/{id}
-     *
-     * @param int $id
-     * @return array
-     * @throws NotFoundHttpException
-     */
     public function actionUpdate($id)
     {
-        $task = $this->findModel($id);
-        $task->load(Yii::$app->request->getBodyParams(), '');
-
-        if ($task->save()) {
-
-            $this->clearCache();
-
-            return [
-                'success' => true,
-                'message' => 'Task updated successfully',
-                'data' => $task->toArray(),
-            ];
+        try {
+            $task = $this->service->update($id, Yii::$app->request->getBodyParams());
+            return $this->jsonResponse(true, 'Task updated successfully', $task->toArray(), 200);
+        } catch (NotFoundHttpException $e) {
+            return $this->jsonResponse(false, 'Task not found', [], 404);
+        } catch (Throwable $e) {
+            Yii::warning($e->getMessage(), __METHOD__);
+            return $this->jsonResponse(false, 'Validation failed', $this->decodeErrors($e), 422);
         }
-
-        Yii::$app->response->setStatusCode(422);
-        return [
-            'success' => false,
-            'message' => 'Validation failed',
-            'errors' => $task->errors,
-        ];
     }
 
-    /**
-     * Удаление задачи
-     * DELETE /tasks/{id}
-     *
-     * @param int $id
-     * @return array
-     * @throws NotFoundHttpException
-     */
     public function actionDelete($id)
     {
-        $task = $this->findModel($id);
-
-        if ($task->delete()) {
-
-            $this->clearCache();
-
-            Yii::$app->response->setStatusCode(204);
-            return [
-                'success' => true,
-                'message' => 'Task deleted successfully',
-            ];
+        try {
+            $this->service->delete($id);
+            return $this->jsonResponse(true, 'Task deleted successfully', [], 204);
+        } catch (NotFoundHttpException $e) {
+            return $this->jsonResponse(false, 'Task not found', [], 404);
+        } catch (Throwable $e) {
+            Yii::error($e->getMessage(), __METHOD__);
+            return $this->jsonResponse(false, 'Failed to delete task', [], 500);
         }
-
-        return [
-            'success' => false,
-            'message' => 'Failed to delete task',
-        ];
     }
 
-    /**
-     * Поиск по ID
-     *
-     * @param int $id
-     * @return Task
-     * @throws NotFoundHttpException
-     */
-    protected function findModel($id)
+    private function decodeErrors(Throwable $e): array
     {
-        if (($model = Task::findOne($id)) !== null) {
-            return $model;
-        }
-
-        throw new NotFoundHttpException('Task not found');
-    }
-
-    /**
-     * Очистка кэша задач
-     *
-     * @return bool
-     */
-    protected function clearCache()
-    {
-        return Yii::$app->cache->delete(self::CACHE_KEY);
+        $msg = $e->getMessage();
+        $decoded = json_decode($msg, true);
+        return is_array($decoded) ? $decoded : ['_error' => $msg];
     }
 }
+
+

@@ -71,7 +71,16 @@ $config = [
             'charset' => 'UTF-8',
         ],
     ],
+
     'params' => [],
+
+    'container' => [
+        'definitions' => [
+            \app\services\TaskService::class => function () {
+                return new \app\services\TaskService(Yii::$app->cache);
+            },
+        ],
+    ],
 ];
 
 if (YII_ENV_DEV) {
@@ -89,3 +98,4 @@ if (YII_ENV_DEV) {
 }
 
 return $config;
+
